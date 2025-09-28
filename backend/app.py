@@ -54,6 +54,30 @@ class CourseStats(BaseModel):
 
 # API Endpoints
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    try:
+        # Check if we can get course analytics (tests vector store)
+        analytics = rag_system.get_course_analytics()
+        return {
+            "status": "healthy",
+            "total_courses": analytics["total_courses"],
+            "components": {
+                "vector_store": "ok",
+                "rag_system": "ok"
+            }
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "components": {
+                "vector_store": "error",
+                "rag_system": "error"
+            }
+        }
+
 @app.post("/api/query", response_model=QueryResponse)
 async def query_documents(request: QueryRequest):
     """Process a query and return response with sources"""
