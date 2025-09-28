@@ -37,6 +37,25 @@ curl -X POST http://localhost:8000/api/query \
   -d '{"query": "What is this course about?", "session_id": "test123"}'
 ```
 
+### Testing Commands
+
+```bash
+# Run all tests
+uv run pytest tests/ -v
+
+# Run specific test file
+uv run pytest tests/test_ai_generator.py -v
+
+# Run single test method
+uv run pytest tests/test_ai_generator.py::TestAIGenerator::test_sequential_tool_usage -v
+
+# Run tests with short traceback
+uv run pytest tests/ -v --tb=short
+
+# Check syntax of a specific file
+uv run python -m py_compile backend/ai_generator.py
+```
+
 ## Architecture Overview
 
 This is a **Retrieval-Augmented Generation (RAG) chatbot** for course materials using a **tool-calling architecture** where Claude dynamically decides when to search the knowledge base.
@@ -61,6 +80,8 @@ This is a **Retrieval-Augmented Generation (RAG) chatbot** for course materials 
 ### Key Architecture Decisions
 
 **Tool-Based RAG**: Instead of searching for every query, Claude decides when to use search tools based on query context. This reduces unnecessary searches for general conversation.
+
+**Sequential Tool Calling**: Claude can make up to 2 sequential tool calls in separate API rounds, enabling complex queries like "Search for neural networks in course X, then give me the outline of that course." This supports multi-step research workflows and course comparisons.
 
 **Course Name Resolution**: The system uses fuzzy matching to resolve course names (e.g., "course 1" → "Introduction to Machine Learning") via a separate catalog collection.
 
@@ -101,6 +122,7 @@ All configuration in `backend/config.py`:
 - `CHUNK_OVERLAP`: 100 chars
 - `MAX_RESULTS`: 5 search results
 - `MAX_HISTORY`: 2 conversation turns
+- `MAX_TOOL_ROUNDS`: 2 sequential tool calling rounds
 - `CHROMA_PATH`: "./chroma_db"
 
 ### API Endpoints
@@ -118,9 +140,19 @@ All configuration in `backend/config.py`:
 
 **Error Boundaries**: Each component has try-catch blocks with fallback behavior. Network failures, API errors, and search failures return user-friendly messages.
 
+**Sequential Tool Implementation**: The AI generator (`ai_generator.py`) supports up to 2 rounds of tool calls via `_handle_sequential_tool_execution()`. Each round maintains conversation context and tools remain available until max rounds are reached or Claude naturally terminates.
+
 **Tool Registration**: New tools must inherit from `Tool` abstract class (`search_tools.py`) and be registered in `RAGSystem.__init__` (`rag_system.py:22-26`)
 
 **Windows Users**: Use Git Bash to run shell scripts and commands
+
+**Test Structure**: Tests are organized in `backend/tests/` with comprehensive coverage:
+- `test_ai_generator.py`: AI generator functionality including sequential tool calling
+- `test_rag_integration.py`: End-to-end RAG system integration tests
+- `test_search_tools.py`: Tool execution and management
+- `test_vector_store.py`: Vector storage and search functionality
+
+Additional debug/test scripts exist in `backend/` root for ad-hoc testing during development.
 
 ## Reference Documentation
 
@@ -137,3 +169,9 @@ These documents provide deep-dive explanations of how queries flow through the s
 ### Playwright MCP Integration (`/reference/playwright-mcp-wsl-quickstart.md`)
 
 Quick setup guide for using Playwright MCP server with Claude Code on WSL for browser automation testing. Includes configuration for headless Chromium and troubleshooting tips.
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
