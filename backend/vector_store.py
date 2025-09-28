@@ -58,20 +58,20 @@ class VectorStore:
             embedding_function=self.embedding_function
         )
     
-    def search(self, 
+    def search(self,
                query: str,
                course_name: Optional[str] = None,
                lesson_number: Optional[int] = None,
                limit: Optional[int] = None) -> SearchResults:
         """
         Main search interface that handles course resolution and content search.
-        
+
         Args:
             query: What to search for in course content
             course_name: Optional course name/title to filter by
             lesson_number: Optional lesson number to filter by
             limit: Maximum results to return
-            
+
         Returns:
             SearchResults object with documents and metadata
         """
@@ -81,21 +81,26 @@ class VectorStore:
             course_title = self._resolve_course_name(course_name)
             if not course_title:
                 return SearchResults.empty(f"No course found matching '{course_name}'")
-        
+
         # Step 2: Build filter for content search
         filter_dict = self._build_filter(course_title, lesson_number)
-        
+
         # Step 3: Search course content
         # Use provided limit or fall back to configured max_results
         search_limit = limit if limit is not None else self.max_results
-        
+
         try:
             results = self.course_content.query(
                 query_texts=[query],
                 n_results=search_limit,
                 where=filter_dict
             )
-            return SearchResults.from_chroma(results)
+            search_results = SearchResults.from_chroma(results)
+
+            # Step 4: Enrich metadata with lesson links
+            self._enrich_metadata_with_lesson_links(search_results)
+
+            return search_results
         except Exception as e:
             return SearchResults.empty(f"Search error: {str(e)}")
     
@@ -114,7 +119,17 @@ class VectorStore:
             print(f"Error resolving course name: {e}")
         
         return None
-    
+
+    def _enrich_metadata_with_lesson_links(self, search_results: SearchResults):
+        """Enrich search result metadata with lesson links"""
+        for metadata in search_results.metadata:
+            course_title = metadata.get('course_title')
+            lesson_number = metadata.get('lesson_number')
+
+            if course_title and lesson_number is not None:
+                lesson_link = self.get_lesson_link(course_title, lesson_number)
+                metadata['lesson_link'] = lesson_link
+
     def _build_filter(self, course_title: Optional[str], lesson_number: Optional[int]) -> Optional[Dict]:
         """Build ChromaDB filter from search parameters"""
         if not course_title and lesson_number is None:

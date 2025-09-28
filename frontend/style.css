@@ -245,6 +245,62 @@ header h1 {
     color: var(--text-secondary);
 }
 
+/* Source link styles */
+.sources-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.source-item {
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.source-item:hover {
+    background: var(--surface-hover);
+    border-color: var(--primary-color);
+    transform: translateX(2px);
+}
+
+.source-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.2s ease;
+    display: block;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+.source-link:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
+
+.source-link:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.source-text {
+    color: var(--text-secondary);
+    display: block;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
 /* Markdown formatting styles */
 .message-content h1,
 .message-content h2,
@@ -599,6 +655,40 @@ details[open] .suggested-header::before {
     color: var(--text-secondary);
     font-style: italic;
     text-transform: none;
+}
+
+/* New Chat Button in Sidebar - styled like other section headers */
+.new-chat-button {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.5rem 0;
+    border: none;
+    background: none;
+    outline: none;
+    transition: color 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: left;
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.new-chat-button:focus {
+    color: var(--primary-color);
+}
+
+.new-chat-button:hover {
+    color: var(--primary-color);
+}
+
+.new-chat-button::before {
+    content: '▶';
+    display: inline-block;
+    margin-right: 0.5rem;
+    transition: transform 0.2s ease;
+    font-size: 0.75rem;
 }
 
 /* Suggested Questions in Sidebar */

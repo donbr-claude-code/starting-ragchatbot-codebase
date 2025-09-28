@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 import os
 
 from config import config
@@ -44,6 +44,7 @@ class QueryResponse(BaseModel):
     """Response model for course queries"""
     answer: str
     sources: List[str]
+    source_links: Dict[str, str]
     session_id: str
 
 class CourseStats(BaseModel):
@@ -63,11 +64,12 @@ async def query_documents(request: QueryRequest):
             session_id = rag_system.session_manager.create_session()
         
         # Process query using RAG system
-        answer, sources = rag_system.query(request.query, session_id)
-        
+        answer, sources, source_links = rag_system.query(request.query, session_id)
+
         return QueryResponse(
             answer=answer,
             sources=sources,
+            source_links=source_links,
             session_id=session_id
         )
     except Exception as e:
@@ -82,6 +84,15 @@ async def get_course_stats():
             total_courses=analytics["total_courses"],
             course_titles=analytics["course_titles"]
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/sessions/{session_id}/clear")
+async def clear_session(session_id: str):
+    """Clear a conversation session"""
+    try:
+        rag_system.session_manager.clear_session(session_id)
+        return {"message": "Session cleared successfully", "session_id": session_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

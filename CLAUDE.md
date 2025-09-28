@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-### Environment Setup
+### Quick Start
+
 ```bash
 # Install dependencies
 uv sync
@@ -12,56 +13,66 @@ uv sync
 # Set up environment variables (required)
 cp .env.example .env
 # Edit .env to add your ANTHROPIC_API_KEY
-```
 
-### Running the Application
-```bash
-# Quick start (recommended)
+# Run the application
 ./run.sh
-
-# Manual start
-cd backend && uv run uvicorn app:app --reload --port 8000
 ```
 
-### Access Points
-- Web Interface: `http://localhost:8000`
-- API Documentation: `http://localhost:8000/docs`
+### Common Commands
+
+```bash
+# Manual start with debugging
+cd backend && uv run uvicorn app:app --reload --port 8000 --log-level debug
+
+# Check application health
+curl http://localhost:8000/health
+
+# Reset database (clears all indexed documents)
+rm -rf backend/chroma_db
+# Restart application to re-index documents from /docs
+
+# Test query endpoint
+curl -X POST http://localhost:8000/api/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is this course about?", "session_id": "test123"}'
+```
 
 ## Architecture Overview
 
-This is a **Retrieval-Augmented Generation (RAG) chatbot system** for querying course materials. The architecture follows a tool-based approach where Claude AI dynamically decides when to search course content.
+This is a **Retrieval-Augmented Generation (RAG) chatbot** for course materials using a **tool-calling architecture** where Claude dynamically decides when to search the knowledge base.
 
-### Core Components Architecture
+### Core Pipeline Flow
 
-**Frontend (`/frontend/`)**: Simple HTML/CSS/JavaScript web interface that communicates with the backend via REST API.
+1. **Document Ingestion** (`app.py:startup`): Loads all `.txt` files from `/docs` on startup
+2. **Query Processing** (`rag_system.py:RAGSystem.query`): Main orchestrator that:
+   - Builds conversation context from session history
+   - Sends query to Claude with available search tools
+   - Handles tool calls (search operations) when Claude requests them
+   - Returns final response with source citations
 
-**Backend (`/backend/`)**: FastAPI application organized around the RAG pipeline:
+3. **Tool Execution** (`search_tools.py`): Two tools available to Claude:
+   - `search_course_content`: Semantic search with optional course/lesson filtering
+   - `get_course_outline`: Returns structured course metadata and lesson lists
 
-- **`app.py`**: FastAPI router and startup logic that loads initial documents from `/docs` folder
-- **`rag_system.py`**: **Main orchestrator** - coordinates all components and manages the query processing pipeline
-- **`ai_generator.py`**: Claude API integration with tool calling capabilities
-- **`search_tools.py`**: Tool system that enables Claude to search course content dynamically
-- **`vector_store.py`**: ChromaDB interface with unified search and course resolution
-- **`document_processor.py`**: Processes course documents into structured chunks with context
-- **`session_manager.py`**: Maintains conversation context across queries
-- **`models.py`**: Data models for Course, Lesson, and CourseChunk
+4. **Vector Search** (`vector_store.py:VectorStore`): Manages two ChromaDB collections:
+   - `course_catalog`: Maps course names to IDs for fuzzy matching
+   - `course_content`: Stores document chunks with embeddings for semantic search
 
-### Query Processing Flow
+### Key Architecture Decisions
 
-1. **Frontend** sends JSON query to `/api/query` endpoint
-2. **RAG System** creates prompt and retrieves conversation history
-3. **AI Generator** calls Claude with available tools (search functionality)
-4. **Claude decides** whether to search course content based on query type
-5. **Search Tool** executes semantic search if needed, with optional course/lesson filtering
-6. **Vector Store** performs ChromaDB search with course name resolution
-7. **Response** synthesized by Claude and returned with source attribution
+**Tool-Based RAG**: Instead of searching for every query, Claude decides when to use search tools based on query context. This reduces unnecessary searches for general conversation.
 
-### Key Design Patterns
+**Course Name Resolution**: The system uses fuzzy matching to resolve course names (e.g., "course 1" → "Introduction to Machine Learning") via a separate catalog collection.
 
-**Tool-Based Search**: Claude has access to a `search_course_content` tool with parameters for `query`, `course_name`, and `lesson_number`. This enables intelligent search decisions rather than searching for every query.
+**Context-Enhanced Chunks**: Each text chunk is prefixed with course/lesson metadata during indexing to improve retrieval relevance: `"Course {title} Lesson {number} content: {chunk}"`
 
-**Document Structure**: Course files follow this expected format:
-```
+**Stateful Sessions**: Conversation history is maintained server-side with configurable window size (default: 2 exchanges) for context-aware responses.
+
+### Document Format Requirements
+
+Course documents in `/docs` must follow this structure:
+
+```text
 Course Title: [title]
 Course Link: [url]
 Course Instructor: [instructor]
@@ -69,46 +80,60 @@ Course Instructor: [instructor]
 Lesson 0: Introduction
 Lesson Link: [lesson_url]
 [content...]
+
+Lesson 1: [title]
+[content...]
 ```
 
-**Context Enhancement**: Text chunks are prefixed with course and lesson context (e.g., "Course {title} Lesson {number} content: {chunk}") to improve retrieval accuracy.
+The document processor (`document_processor.py`) expects:
 
-**Dual ChromaDB Collections**:
-- `course_catalog`: Course metadata for name resolution
-- `course_content`: Actual text chunks with embeddings
+- First 3 lines contain course metadata
+- Lessons marked with pattern: `^Lesson\s+(\d+):\s*(.+)$`
+- Lesson links (optional) on line immediately after lesson title
 
-### Configuration
+### Configuration Points
 
-All settings are centralized in `backend/config.py`:
-- **Embedding Model**: `all-MiniLM-L6-v2` (Sentence Transformers)
-- **Chunk Size**: 800 characters with 100 character overlap
-- **Claude Model**: `claude-sonnet-4-20250514`
-- **Database Path**: `./chroma_db` (created automatically)
+All configuration in `backend/config.py`:
 
-### Document Processing Pipeline
+- `ANTHROPIC_MODEL`: "claude-sonnet-4-20250514"
+- `EMBEDDING_MODEL`: "all-MiniLM-L6-v2"
+- `CHUNK_SIZE`: 800 chars
+- `CHUNK_OVERLAP`: 100 chars
+- `MAX_RESULTS`: 5 search results
+- `MAX_HISTORY`: 2 conversation turns
+- `CHROMA_PATH`: "./chroma_db"
 
-Documents in `/docs/` are automatically loaded on startup. The processor:
-1. Extracts course metadata from first 3 lines
-2. Parses lessons using regex pattern `^Lesson\s+(\d+):\s*(.+)$`
-3. Chunks text using sentence boundaries with smart overlap
-4. Enhances chunks with course/lesson context
-5. Stores in ChromaDB with embeddings
+### API Endpoints
 
-### Session Management
+- `GET /` - Web interface
+- `POST /api/query` - Main query endpoint
+  - Request: `{"query": string, "session_id": string?}`
+  - Response: `{"response": string, "sources": [...], "session_id": string}`
+- `POST /api/clear-session/{session_id}` - Clear conversation history
+- `GET /health` - Health check
 
-Each conversation gets a unique session ID that maintains:
-- Conversation history (configurable window size)
-- Context for multi-turn conversations
-- Source attribution across queries
+## Implementation Notes
 
-## Important Implementation Notes
+**Dependencies**: Requires Python 3.13+, managed via `uv`. Key packages: chromadb==1.0.15, anthropic==0.58.2, fastapi==0.116.1, sentence-transformers==5.0.0
 
-**Environment Requirements**: Python 3.13+, requires ANTHROPIC_API_KEY in `.env` file.
+**Error Boundaries**: Each component has try-catch blocks with fallback behavior. Network failures, API errors, and search failures return user-friendly messages.
 
-**Dependencies**: Uses `uv` package manager. Core dependencies include ChromaDB 1.0.15, Anthropic 0.58.2, FastAPI 0.116.1, and sentence-transformers 5.0.0.
+**Tool Registration**: New tools must inherit from `Tool` abstract class (`search_tools.py`) and be registered in `RAGSystem.__init__` (`rag_system.py:22-26`)
 
-**Course Data**: Place course files (*.txt) in `/docs/` directory. They will be automatically processed on application startup.
+**Windows Users**: Use Git Bash to run shell scripts and commands
 
-**Error Handling**: Each layer handles failures gracefully - network errors, search failures, and API issues are caught and presented as user-friendly messages.
-- always use uv to run the server.  do not use pip to run it directly
-- make sure to use uv for all dependencies
+## Reference Documentation
+
+The `/reference/` folder contains supplementary documentation:
+
+### Architecture Documentation (`/reference/architecture/`)
+
+- **QUERY_FLOW.md**: Detailed narrative walkthrough of the query processing pipeline with specific line references
+- **QUERY_FLOW_DIAGRAM.md**: ASCII block diagrams showing system architecture and data flow
+- **QUERY_FLOW_MERMAID.md**: Mermaid diagrams for system visualization (flowcharts, sequence diagrams, component diagrams)
+
+These documents provide deep-dive explanations of how queries flow through the system, from user input through tool execution to response generation.
+
+### Playwright MCP Integration (`/reference/playwright-mcp-wsl-quickstart.md`)
+
+Quick setup guide for using Playwright MCP server with Claude Code on WSL for browser automation testing. Includes configuration for headless Chromium and troubleshooting tips.
