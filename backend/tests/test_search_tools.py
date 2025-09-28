@@ -1,6 +1,7 @@
-import pytest
 from unittest.mock import Mock, patch
-from search_tools import CourseSearchTool, CourseOutlineTool, ToolManager, Tool
+
+import pytest
+from search_tools import CourseOutlineTool, CourseSearchTool, Tool, ToolManager
 from vector_store import SearchResults
 
 
@@ -31,11 +32,13 @@ class TestCourseSearchTool:
         mock_result.error = None
         mock_result.is_empty.return_value = False
         mock_result.documents = ["Test content about machine learning"]
-        mock_result.metadata = [{
-            "course_title": "ML Course",
-            "lesson_number": 1,
-            "lesson_link": "http://example.com/lesson1"
-        }]
+        mock_result.metadata = [
+            {
+                "course_title": "ML Course",
+                "lesson_number": 1,
+                "lesson_link": "http://example.com/lesson1",
+            }
+        ]
 
         mock_vector_store.search.return_value = mock_result
 
@@ -44,9 +47,7 @@ class TestCourseSearchTool:
 
         # Verify search was called with correct parameters
         mock_vector_store.search.assert_called_once_with(
-            query="machine learning",
-            course_name=None,
-            lesson_number=None
+            query="machine learning", course_name=None, lesson_number=None
         )
 
         # Verify result formatting
@@ -69,9 +70,7 @@ class TestCourseSearchTool:
         result = tool.execute(query="test", course_name="Specific Course")
 
         mock_vector_store.search.assert_called_once_with(
-            query="test",
-            course_name="Specific Course",
-            lesson_number=None
+            query="test", course_name="Specific Course", lesson_number=None
         )
 
     def test_execute_with_lesson_filter(self, mock_vector_store):
@@ -88,9 +87,7 @@ class TestCourseSearchTool:
         result = tool.execute(query="test", lesson_number=3)
 
         mock_vector_store.search.assert_called_once_with(
-            query="test",
-            course_name=None,
-            lesson_number=3
+            query="test", course_name=None, lesson_number=3
         )
 
     def test_execute_with_error(self, mock_vector_store):
@@ -140,8 +137,16 @@ class TestCourseSearchTool:
         mock_result.is_empty.return_value = False
         mock_result.documents = ["Content 1", "Content 2"]
         mock_result.metadata = [
-            {"course_title": "Course A", "lesson_number": 1, "lesson_link": "http://a.com/1"},
-            {"course_title": "Course B", "lesson_number": 2, "lesson_link": "http://b.com/2"}
+            {
+                "course_title": "Course A",
+                "lesson_number": 1,
+                "lesson_link": "http://a.com/1",
+            },
+            {
+                "course_title": "Course B",
+                "lesson_number": 2,
+                "lesson_link": "http://b.com/2",
+            },
         ]
 
         mock_vector_store.search.return_value = mock_result
@@ -182,10 +187,12 @@ class TestCourseOutlineTool:
 
         # Mock course catalog get
         mock_vector_store.course_catalog.get.return_value = {
-            'metadatas': [{
-                'course_link': 'http://example.com/course',
-                'lessons_json': '[{"lesson_number": 1, "lesson_title": "Introduction"}, {"lesson_number": 2, "lesson_title": "Advanced"}]'
-            }]
+            "metadatas": [
+                {
+                    "course_link": "http://example.com/course",
+                    "lessons_json": '[{"lesson_number": 1, "lesson_title": "Introduction"}, {"lesson_number": 2, "lesson_title": "Advanced"}]',
+                }
+            ]
         }
 
         tool = CourseOutlineTool(mock_vector_store)
@@ -195,7 +202,9 @@ class TestCourseOutlineTool:
         mock_vector_store._resolve_course_name.assert_called_once_with("Test")
 
         # Verify course catalog was queried
-        mock_vector_store.course_catalog.get.assert_called_once_with(ids=["Test Course"])
+        mock_vector_store.course_catalog.get.assert_called_once_with(
+            ids=["Test Course"]
+        )
 
         # Verify result formatting
         assert "**Course:** Test Course" in result
@@ -216,7 +225,7 @@ class TestCourseOutlineTool:
     def test_execute_metadata_not_found(self, mock_vector_store):
         """Test handling when course metadata is not found"""
         mock_vector_store._resolve_course_name.return_value = "Test Course"
-        mock_vector_store.course_catalog.get.return_value = {'metadatas': []}
+        mock_vector_store.course_catalog.get.return_value = {"metadatas": []}
 
         tool = CourseOutlineTool(mock_vector_store)
         result = tool.execute(course_name="Test")
@@ -244,7 +253,9 @@ class TestToolManager:
         mock_tool = Mock(spec=Tool)
         mock_tool.get_tool_definition.return_value = {}
 
-        with pytest.raises(ValueError, match="Tool must have a 'name' in its definition"):
+        with pytest.raises(
+            ValueError, match="Tool must have a 'name' in its definition"
+        ):
             manager.register_tool(mock_tool)
 
     def test_get_tool_definitions(self, mock_vector_store):

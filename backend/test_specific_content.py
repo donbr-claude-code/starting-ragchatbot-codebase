@@ -3,8 +3,8 @@
 Test with very specific content that Claude couldn't know from training.
 """
 
-import sys
 import os
+import sys
 
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(__file__))
@@ -38,7 +38,7 @@ def test_specific_content_queries():
     for i, query in enumerate(specific_queries, 1):
         print(f"\n{'-'*60}")
         print(f"Specific Test {i}: {query}")
-        print('-'*60)
+        print("-" * 60)
 
         try:
             # Reset sources
@@ -64,9 +64,9 @@ def test_specific_content_queries():
 
 def test_force_tool_usage():
     """Try to force tool usage with very explicit instructions"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing with FORCED tool usage instructions...")
-    print("="*60)
+    print("=" * 60)
 
     rag = RAGSystem(config)
 
@@ -91,13 +91,13 @@ def test_force_tool_usage():
 
 def examine_api_behavior():
     """Check the actual API calls being made"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Examining API behavior...")
-    print("="*60)
+    print("=" * 60)
 
     # Let's monkey patch the API call to see what's happening
-    from ai_generator import AIGenerator
     import anthropic
+    from ai_generator import AIGenerator
 
     original_create = None
 
@@ -105,11 +105,13 @@ def examine_api_behavior():
         print("API Call Parameters:")
         print(f"  Model: {kwargs.get('model', 'not specified')}")
         print(f"  Tools provided: {'tools' in kwargs}")
-        if 'tools' in kwargs:
+        if "tools" in kwargs:
             print(f"  Number of tools: {len(kwargs['tools'])}")
             print(f"  Tool names: {[t['name'] for t in kwargs['tools']]}")
         print(f"  Tool choice: {kwargs.get('tool_choice', 'not specified')}")
-        print(f"  Query: {kwargs.get('messages', [{}])[0].get('content', 'not found')[:100]}...")
+        print(
+            f"  Query: {kwargs.get('messages', [{}])[0].get('content', 'not found')[:100]}..."
+        )
 
         # Call original
         result = original_create(*args, **kwargs)

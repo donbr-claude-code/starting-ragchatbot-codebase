@@ -3,8 +3,8 @@
 Debug version of query to trace source handling
 """
 
-import sys
 import os
+import sys
 
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(__file__))
@@ -48,7 +48,7 @@ def debug_query_flow():
             query=prompt,
             conversation_history=None,
             tools=rag.tool_manager.get_tool_definitions(),
-            tool_manager=rag.tool_manager
+            tool_manager=rag.tool_manager,
         )
 
         print(f"6. AI generator returned, response length: {len(response)}")
@@ -75,9 +75,9 @@ def debug_query_flow():
 
 def test_direct_tool_execution():
     """Test tool execution directly"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing direct tool execution...")
-    print("="*60)
+    print("=" * 60)
 
     rag = RAGSystem(config)
 
@@ -86,7 +86,9 @@ def test_direct_tool_execution():
     print(f"Initial sources: {rag.tool_manager.get_last_sources()}")
 
     # Execute tool directly
-    result = rag.tool_manager.execute_tool("search_course_content", query="MCP examples")
+    result = rag.tool_manager.execute_tool(
+        "search_course_content", query="MCP examples"
+    )
     print(f"Direct execution result length: {len(result)}")
 
     # Check sources immediately

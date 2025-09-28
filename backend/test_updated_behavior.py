@@ -3,8 +3,8 @@
 Test the updated system behavior
 """
 
-import sys
 import os
+import sys
 
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(__file__))
@@ -20,8 +20,14 @@ def test_updated_behavior():
     rag = RAGSystem(config)
 
     test_queries = [
-        ("Give me the outline of the Computer Use course", "Should use get_course_outline tool"),
-        ("What does the MCP course cover?", "Should use get_course_outline or search tool"),
+        (
+            "Give me the outline of the Computer Use course",
+            "Should use get_course_outline tool",
+        ),
+        (
+            "What does the MCP course cover?",
+            "Should use get_course_outline or search tool",
+        ),
         ("What is machine learning?", "Should use search tool (course-related)"),
         ("What is 2+2?", "Should NOT use tools (pure math)"),
         ("Hello how are you?", "Should NOT use tools (greeting)"),
@@ -31,7 +37,7 @@ def test_updated_behavior():
         print(f"\n{'-'*60}")
         print(f"Test {i}: {query}")
         print(f"Expected: {expected}")
-        print('-'*60)
+        print("-" * 60)
 
         try:
             # Reset sources
@@ -44,7 +50,9 @@ def test_updated_behavior():
             print(f"Sources count: {len(sources)}")
 
             if sources:
-                print(f"✅ Used tools - Sources: {sources[:2]}...")  # Show first 2 sources
+                print(
+                    f"✅ Used tools - Sources: {sources[:2]}..."
+                )  # Show first 2 sources
                 print(f"Response preview: {response[:150]}...")
             else:
                 print("❌ No tools used")

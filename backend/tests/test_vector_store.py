@@ -1,10 +1,11 @@
-import pytest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
 from unittest.mock import Mock, patch
-from vector_store import VectorStore, SearchResults
-from models import Course, Lesson, CourseChunk
+
+import pytest
+from models import Course, CourseChunk, Lesson
+from vector_store import SearchResults, VectorStore
 
 
 class TestSearchResults:
@@ -13,25 +14,21 @@ class TestSearchResults:
     def test_from_chroma_with_results(self):
         """Test creating SearchResults from ChromaDB results"""
         chroma_results = {
-            'documents': [['doc1', 'doc2']],
-            'metadatas': [[{'key1': 'value1'}, {'key2': 'value2'}]],
-            'distances': [[0.1, 0.2]]
+            "documents": [["doc1", "doc2"]],
+            "metadatas": [[{"key1": "value1"}, {"key2": "value2"}]],
+            "distances": [[0.1, 0.2]],
         }
 
         results = SearchResults.from_chroma(chroma_results)
 
-        assert results.documents == ['doc1', 'doc2']
-        assert results.metadata == [{'key1': 'value1'}, {'key2': 'value2'}]
+        assert results.documents == ["doc1", "doc2"]
+        assert results.metadata == [{"key1": "value1"}, {"key2": "value2"}]
         assert results.distances == [0.1, 0.2]
         assert results.error is None
 
     def test_from_chroma_empty_results(self):
         """Test creating SearchResults from empty ChromaDB results"""
-        chroma_results = {
-            'documents': [],
-            'metadatas': [],
-            'distances': []
-        }
+        chroma_results = {"documents": [], "metadatas": [], "distances": []}
 
         results = SearchResults.from_chroma(chroma_results)
 
@@ -57,7 +54,7 @@ class TestSearchResults:
         assert empty_results.is_empty() is True
 
         # Non-empty results
-        non_empty_results = SearchResults(['doc'], [{}], [0.1])
+        non_empty_results = SearchResults(["doc"], [{}], [0.1])
         assert non_empty_results.is_empty() is False
 
 
@@ -69,7 +66,7 @@ class TestVectorStore:
         store = VectorStore(
             chroma_path=test_config.CHROMA_PATH,
             embedding_model=test_config.EMBEDDING_MODEL,
-            max_results=test_config.MAX_RESULTS
+            max_results=test_config.MAX_RESULTS,
         )
 
         assert store.max_results == test_config.MAX_RESULTS
@@ -88,21 +85,22 @@ class TestVectorStore:
 
         # Verify course was added
         results = real_vector_store.course_catalog.get(ids=[sample_course.title])
-        assert len(results['ids']) == 1
-        assert results['ids'][0] == sample_course.title
+        assert len(results["ids"]) == 1
+        assert results["ids"][0] == sample_course.title
 
-        metadata = results['metadatas'][0]
-        assert metadata['title'] == sample_course.title
-        assert metadata['instructor'] == sample_course.instructor
-        assert metadata['course_link'] == sample_course.course_link
-        assert metadata['lesson_count'] == len(sample_course.lessons)
+        metadata = results["metadatas"][0]
+        assert metadata["title"] == sample_course.title
+        assert metadata["instructor"] == sample_course.instructor
+        assert metadata["course_link"] == sample_course.course_link
+        assert metadata["lesson_count"] == len(sample_course.lessons)
 
         # Check lessons JSON
         import json
-        lessons = json.loads(metadata['lessons_json'])
+
+        lessons = json.loads(metadata["lessons_json"])
         assert len(lessons) == 3
-        assert lessons[0]['lesson_number'] == 0
-        assert lessons[0]['lesson_title'] == "Introduction"
+        assert lessons[0]["lesson_number"] == 0
+        assert lessons[0]["lesson_title"] == "Introduction"
 
     def test_add_course_content(self, real_vector_store, sample_course_chunks):
         """Test adding course content chunks"""
@@ -110,22 +108,22 @@ class TestVectorStore:
 
         # Verify chunks were added
         results = real_vector_store.course_content.get()
-        assert len(results['ids']) == 3
+        assert len(results["ids"]) == 3
 
         # Check that IDs are properly formatted
         expected_ids = [
             "Introduction_to_Machine_Learning_0",
             "Introduction_to_Machine_Learning_1",
-            "Introduction_to_Machine_Learning_2"
+            "Introduction_to_Machine_Learning_2",
         ]
-        assert set(results['ids']) == set(expected_ids)
+        assert set(results["ids"]) == set(expected_ids)
 
         # Check metadata
-        for i, metadata in enumerate(results['metadatas']):
+        for i, metadata in enumerate(results["metadatas"]):
             chunk = sample_course_chunks[i]
-            assert metadata['course_title'] == chunk.course_title
-            assert metadata['lesson_number'] == chunk.lesson_number
-            assert metadata['chunk_index'] == chunk.chunk_index
+            assert metadata["course_title"] == chunk.course_title
+            assert metadata["lesson_number"] == chunk.lesson_number
+            assert metadata["chunk_index"] == chunk.chunk_index
 
     def test_search_without_filters(self, populated_vector_store):
         """Test basic search without filters"""
@@ -144,8 +142,7 @@ class TestVectorStore:
         """Test search with course name filter"""
         # Use partial course name
         results = populated_vector_store.search(
-            "concepts",
-            course_name="Machine Learning"
+            "concepts", course_name="Machine Learning"
         )
 
         assert not results.is_empty()
@@ -153,28 +150,23 @@ class TestVectorStore:
 
         # All results should be from the correct course
         for metadata in results.metadata:
-            assert metadata['course_title'] == "Introduction to Machine Learning"
+            assert metadata["course_title"] == "Introduction to Machine Learning"
 
     def test_search_with_lesson_filter(self, populated_vector_store):
         """Test search with lesson number filter"""
-        results = populated_vector_store.search(
-            "concepts",
-            lesson_number=1
-        )
+        results = populated_vector_store.search("concepts", lesson_number=1)
 
         assert not results.is_empty()
         assert results.error is None
 
         # All results should be from lesson 1
         for metadata in results.metadata:
-            assert metadata['lesson_number'] == 1
+            assert metadata["lesson_number"] == 1
 
     def test_search_with_both_filters(self, populated_vector_store):
         """Test search with both course and lesson filters"""
         results = populated_vector_store.search(
-            "advanced",
-            course_name="Machine Learning",
-            lesson_number=2
+            "advanced", course_name="Machine Learning", lesson_number=2
         )
 
         assert not results.is_empty()
@@ -182,14 +174,13 @@ class TestVectorStore:
 
         # All results should match both filters
         for metadata in results.metadata:
-            assert metadata['course_title'] == "Introduction to Machine Learning"
-            assert metadata['lesson_number'] == 2
+            assert metadata["course_title"] == "Introduction to Machine Learning"
+            assert metadata["lesson_number"] == 2
 
     def test_search_nonexistent_course(self, populated_vector_store):
         """Test search with nonexistent course name"""
         results = populated_vector_store.search(
-            "test",
-            course_name="Nonexistent Course"
+            "test", course_name="Nonexistent Course"
         )
 
         assert results.error is not None
@@ -204,7 +195,9 @@ class TestVectorStore:
 
     def test_resolve_course_name_exact_match(self, populated_vector_store):
         """Test course name resolution with exact match"""
-        resolved = populated_vector_store._resolve_course_name("Introduction to Machine Learning")
+        resolved = populated_vector_store._resolve_course_name(
+            "Introduction to Machine Learning"
+        )
         assert resolved == "Introduction to Machine Learning"
 
     def test_resolve_course_name_partial_match(self, populated_vector_store):
@@ -235,12 +228,7 @@ class TestVectorStore:
     def test_build_filter_both(self, real_vector_store):
         """Test filter building with both course and lesson"""
         filter_dict = real_vector_store._build_filter("Test Course", 1)
-        expected = {
-            "$and": [
-                {"course_title": "Test Course"},
-                {"lesson_number": 1}
-            ]
-        }
+        expected = {"$and": [{"course_title": "Test Course"}, {"lesson_number": 1}]}
         assert filter_dict == expected
 
     def test_enrich_metadata_with_lesson_links(self, populated_vector_store):
@@ -248,18 +236,17 @@ class TestVectorStore:
         # Create mock search results
         search_results = SearchResults(
             documents=["test doc"],
-            metadata=[{
-                "course_title": "Introduction to Machine Learning",
-                "lesson_number": 1
-            }],
-            distances=[0.1]
+            metadata=[
+                {"course_title": "Introduction to Machine Learning", "lesson_number": 1}
+            ],
+            distances=[0.1],
         )
 
         populated_vector_store._enrich_metadata_with_lesson_links(search_results)
 
         # Check that lesson link was added
-        assert 'lesson_link' in search_results.metadata[0]
-        assert search_results.metadata[0]['lesson_link'] == "http://example.com/lesson1"
+        assert "lesson_link" in search_results.metadata[0]
+        assert search_results.metadata[0]["lesson_link"] == "http://example.com/lesson1"
 
     def test_get_existing_course_titles(self, populated_vector_store):
         """Test getting existing course titles"""
@@ -273,24 +260,32 @@ class TestVectorStore:
 
     def test_get_course_link(self, populated_vector_store):
         """Test getting course link"""
-        link = populated_vector_store.get_course_link("Introduction to Machine Learning")
+        link = populated_vector_store.get_course_link(
+            "Introduction to Machine Learning"
+        )
         assert link == "http://example.com/course"
 
     def test_get_lesson_link(self, populated_vector_store):
         """Test getting lesson link"""
         # Test existing lesson
-        link = populated_vector_store.get_lesson_link("Introduction to Machine Learning", 1)
+        link = populated_vector_store.get_lesson_link(
+            "Introduction to Machine Learning", 1
+        )
         assert link == "http://example.com/lesson1"
 
         # Test non-existent lesson
-        link = populated_vector_store.get_lesson_link("Introduction to Machine Learning", 99)
+        link = populated_vector_store.get_lesson_link(
+            "Introduction to Machine Learning", 99
+        )
         assert link is None
 
         # Test non-existent course
         link = populated_vector_store.get_lesson_link("Nonexistent Course", 1)
         assert link is None
 
-    def test_clear_all_data(self, real_vector_store, sample_course, sample_course_chunks):
+    def test_clear_all_data(
+        self, real_vector_store, sample_course, sample_course_chunks
+    ):
         """Test clearing all data"""
         # Add some data first
         real_vector_store.add_course_metadata(sample_course)
@@ -312,11 +307,11 @@ class TestVectorStore:
         assert len(metadata_list) == 1
         metadata = metadata_list[0]
 
-        assert metadata['title'] == "Introduction to Machine Learning"
-        assert metadata['instructor'] == "Dr. Test"
-        assert 'lessons' in metadata
-        assert len(metadata['lessons']) == 3
-        assert 'lessons_json' not in metadata  # Should be removed
+        assert metadata["title"] == "Introduction to Machine Learning"
+        assert metadata["instructor"] == "Dr. Test"
+        assert "lessons" in metadata
+        assert len(metadata["lessons"]) == 3
+        assert "lessons_json" not in metadata  # Should be removed
 
     def test_search_with_limit(self, populated_vector_store):
         """Test search with custom limit"""
@@ -328,7 +323,11 @@ class TestVectorStore:
     def test_error_handling_in_search(self, real_vector_store):
         """Test error handling in search method"""
         # Mock the collection to raise an exception
-        with patch.object(real_vector_store.course_content, 'query', side_effect=Exception("Database error")):
+        with patch.object(
+            real_vector_store.course_content,
+            "query",
+            side_effect=Exception("Database error"),
+        ):
             results = real_vector_store.search("test query")
 
             assert results.error is not None
@@ -343,14 +342,16 @@ class TestVectorStoreIntegration:
         """Test complete workflow: add data, search, get metadata"""
         # Create test course
         lessons = [
-            Lesson(lesson_number=1, title="Introduction", lesson_link="http://test.com/1"),
-            Lesson(lesson_number=2, title="Advanced", lesson_link="http://test.com/2")
+            Lesson(
+                lesson_number=1, title="Introduction", lesson_link="http://test.com/1"
+            ),
+            Lesson(lesson_number=2, title="Advanced", lesson_link="http://test.com/2"),
         ]
         course = Course(
             title="Test Course",
             course_link="http://test.com/course",
             instructor="Test Instructor",
-            lessons=lessons
+            lessons=lessons,
         )
 
         # Create test chunks
@@ -359,14 +360,14 @@ class TestVectorStoreIntegration:
                 content="This course covers fundamental concepts of testing",
                 course_title="Test Course",
                 lesson_number=1,
-                chunk_index=0
+                chunk_index=0,
             ),
             CourseChunk(
                 content="Advanced testing techniques and methodologies",
                 course_title="Test Course",
                 lesson_number=2,
-                chunk_index=1
-            )
+                chunk_index=1,
+            ),
         ]
 
         # Add data
@@ -385,4 +386,4 @@ class TestVectorStoreIntegration:
         # Test metadata retrieval
         metadata = real_vector_store.get_all_courses_metadata()
         assert len(metadata) == 1
-        assert metadata[0]['title'] == "Test Course"
+        assert metadata[0]["title"] == "Test Course"

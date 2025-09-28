@@ -3,10 +3,11 @@
 Test the actual API endpoint to see if there are issues there
 """
 
-import requests
 import json
-import sys
 import os
+import sys
+
+import requests
 
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(__file__))
@@ -39,18 +40,15 @@ def test_query_endpoint():
     for i, query in enumerate(queries_to_test, 1):
         print(f"\n{'-'*60}")
         print(f"API Test {i}: {query}")
-        print('-'*60)
+        print("-" * 60)
 
-        payload = {
-            "query": query,
-            "session_id": f"test_session_{i}"
-        }
+        payload = {"query": query, "session_id": f"test_session_{i}"}
 
         try:
             response = requests.post(
                 "http://localhost:8000/api/query",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             )
 
             print(f"Status code: {response.status_code}")
@@ -62,7 +60,7 @@ def test_query_endpoint():
                 print(f"Source links count: {len(data.get('source_links', {}))}")
                 print(f"Session ID: {data.get('session_id')}")
 
-                if data.get('sources'):
+                if data.get("sources"):
                     print(f"Sources: {data['sources']}")
                     print("✅ Query used tools successfully")
                 else:
@@ -87,7 +85,7 @@ def test_courses_endpoint():
     """Test the courses analytics endpoint"""
     print(f"\n{'-'*60}")
     print("Testing /api/courses endpoint")
-    print('-'*60)
+    print("-" * 60)
 
     try:
         response = requests.get("http://localhost:8000/api/courses")
@@ -112,14 +110,14 @@ def test_error_cases():
     """Test error cases"""
     print(f"\n{'-'*60}")
     print("Testing error cases")
-    print('-'*60)
+    print("-" * 60)
 
     # Test empty query
     try:
         response = requests.post(
             "http://localhost:8000/api/query",
             json={"query": ""},
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": "application/json"},
         )
         print(f"Empty query status: {response.status_code}")
 
@@ -127,7 +125,7 @@ def test_error_cases():
         response = requests.post(
             "http://localhost:8000/api/query",
             json={"invalid": "data"},
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": "application/json"},
         )
         print(f"Malformed request status: {response.status_code}")
 
@@ -137,7 +135,7 @@ def test_error_cases():
 
 def main():
     print("API Endpoint Testing")
-    print("="*60)
+    print("=" * 60)
 
     # Check if server is running
     if not test_health_endpoint():
@@ -152,7 +150,7 @@ def main():
 
     print(f"\n{'='*60}")
     print("API Testing Complete")
-    print('='*60)
+    print("=" * 60)
 
 
 if __name__ == "__main__":

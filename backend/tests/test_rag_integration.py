@@ -1,11 +1,12 @@
-import pytest
-import tempfile
-import shutil
 import os
-from unittest.mock import Mock, patch, MagicMock
-from rag_system import RAGSystem
+import shutil
+import tempfile
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 from config import Config
-from models import Course, Lesson, CourseChunk
+from models import Course, CourseChunk, Lesson
+from rag_system import RAGSystem
 
 
 class TestRAGSystemIntegration:
@@ -34,16 +35,28 @@ class TestRAGSystemIntegration:
         """RAG system populated with test data"""
         # Create test course
         lessons = [
-            Lesson(lesson_number=0, title="Introduction", lesson_link="http://example.com/lesson0"),
-            Lesson(lesson_number=1, title="Basic Concepts", lesson_link="http://example.com/lesson1"),
-            Lesson(lesson_number=2, title="Advanced Topics", lesson_link="http://example.com/lesson2")
+            Lesson(
+                lesson_number=0,
+                title="Introduction",
+                lesson_link="http://example.com/lesson0",
+            ),
+            Lesson(
+                lesson_number=1,
+                title="Basic Concepts",
+                lesson_link="http://example.com/lesson1",
+            ),
+            Lesson(
+                lesson_number=2,
+                title="Advanced Topics",
+                lesson_link="http://example.com/lesson2",
+            ),
         ]
 
         course = Course(
             title="Introduction to Machine Learning",
             course_link="http://example.com/course",
             instructor="Dr. Test",
-            lessons=lessons
+            lessons=lessons,
         )
 
         # Create test chunks
@@ -52,20 +65,20 @@ class TestRAGSystemIntegration:
                 content="Machine learning is a subset of artificial intelligence that focuses on algorithms.",
                 course_title=course.title,
                 lesson_number=0,
-                chunk_index=0
+                chunk_index=0,
             ),
             CourseChunk(
                 content="Supervised learning uses labeled data to train models for prediction tasks.",
                 course_title=course.title,
                 lesson_number=1,
-                chunk_index=1
+                chunk_index=1,
             ),
             CourseChunk(
                 content="Neural networks are inspired by biological neural networks and can learn complex patterns.",
                 course_title=course.title,
                 lesson_number=2,
-                chunk_index=2
-            )
+                chunk_index=2,
+            ),
         ]
 
         # Add data to RAG system
@@ -91,7 +104,7 @@ class TestRAGSystemIntegration:
     def test_add_course_document_success(self, test_rag_system):
         """Test adding a course document successfully"""
         # Create a temporary course file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("Course Title: Test Course\n")
             f.write("Course Link: http://example.com/course\n")
             f.write("Course Instructor: Test Instructor\n")
@@ -101,7 +114,9 @@ class TestRAGSystemIntegration:
             f.write("This is the introduction to the course.\n")
             f.write("\n")
             f.write("Lesson 1: Main Content\n")
-            f.write("This is the main content of the course with lots of detailed information.\n")
+            f.write(
+                "This is the main content of the course with lots of detailed information.\n"
+            )
             temp_file = f.name
 
         try:
@@ -122,12 +137,14 @@ class TestRAGSystemIntegration:
     def test_add_course_document_error(self, test_rag_system):
         """Test handling of document processing errors"""
         # Try to add a non-existent file
-        course, chunk_count = test_rag_system.add_course_document("/nonexistent/file.txt")
+        course, chunk_count = test_rag_system.add_course_document(
+            "/nonexistent/file.txt"
+        )
 
         assert course is None
         assert chunk_count == 0
 
-    @patch('rag_system.anthropic.Anthropic')
+    @patch("rag_system.anthropic.Anthropic")
     def test_query_without_tool_use(self, mock_anthropic, populated_rag_system):
         """Test query that doesn't trigger tool use"""
         # Mock Anthropic client
@@ -152,9 +169,11 @@ class TestRAGSystemIntegration:
         mock_client.messages.create.assert_called_once()
         call_args = mock_client.messages.create.call_args[1]
         assert "tools" in call_args
-        assert len(call_args["tools"]) == 2  # search_course_content and get_course_outline
+        assert (
+            len(call_args["tools"]) == 2
+        )  # search_course_content and get_course_outline
 
-    @patch('rag_system.anthropic.Anthropic')
+    @patch("rag_system.anthropic.Anthropic")
     def test_query_with_tool_use(self, mock_anthropic, populated_rag_system):
         """Test query that triggers tool use"""
         # Mock Anthropic client
@@ -175,23 +194,29 @@ class TestRAGSystemIntegration:
 
         # Mock final response
         final_response = Mock()
-        final_response.content = [Mock(text="Machine learning is a subset of AI based on the search results")]
+        final_response.content = [
+            Mock(text="Machine learning is a subset of AI based on the search results")
+        ]
 
         mock_client.messages.create.side_effect = [tool_use_response, final_response]
 
         # Patch the ai_generator client
         populated_rag_system.ai_generator.client = mock_client
 
-        response, sources, source_links = populated_rag_system.query("What is machine learning?")
+        response, sources, source_links = populated_rag_system.query(
+            "What is machine learning?"
+        )
 
-        assert response == "Machine learning is a subset of AI based on the search results"
+        assert (
+            response == "Machine learning is a subset of AI based on the search results"
+        )
         assert len(sources) > 0  # Should have sources from the search
         assert isinstance(source_links, dict)
 
         # Verify two API calls were made (initial + final)
         assert mock_client.messages.create.call_count == 2
 
-    @patch('rag_system.anthropic.Anthropic')
+    @patch("rag_system.anthropic.Anthropic")
     def test_query_with_session_management(self, mock_anthropic, populated_rag_system):
         """Test query with session management"""
         # Mock Anthropic client
@@ -217,12 +242,18 @@ class TestRAGSystemIntegration:
         # Verify that conversation history was included in the second call
         assert mock_client.messages.create.call_count == 2
         second_call_args = mock_client.messages.create.call_args_list[1][1]
-        assert "What is AI?" in second_call_args["system"]  # History should be in system prompt
+        assert (
+            "What is AI?" in second_call_args["system"]
+        )  # History should be in system prompt
 
     def test_query_error_handling(self, populated_rag_system):
         """Test error handling in query processing"""
         # Mock an error in AI generator
-        with patch.object(populated_rag_system.ai_generator, 'generate_response', side_effect=Exception("API Error")):
+        with patch.object(
+            populated_rag_system.ai_generator,
+            "generate_response",
+            side_effect=Exception("API Error"),
+        ):
             with pytest.raises(Exception, match="API Error"):
                 populated_rag_system.query("test query")
 
@@ -243,7 +274,7 @@ class TestRAGSystemIntegration:
         try:
             # Create first course file
             course1_path = os.path.join(temp_dir, "course1.txt")
-            with open(course1_path, 'w') as f:
+            with open(course1_path, "w") as f:
                 f.write("Course Title: Course 1\n")
                 f.write("Course Link: http://example.com/course1\n")
                 f.write("Course Instructor: Instructor 1\n")
@@ -256,7 +287,7 @@ class TestRAGSystemIntegration:
 
             # Create second course file
             course2_path = os.path.join(temp_dir, "course2.txt")
-            with open(course2_path, 'w') as f:
+            with open(course2_path, "w") as f:
                 f.write("Course Title: Course 2\n")
                 f.write("Course Link: http://example.com/course2\n")
                 f.write("Course Instructor: Instructor 2\n")
@@ -288,14 +319,16 @@ class TestRAGSystemIntegration:
 
         try:
             course_path = os.path.join(temp_dir, "new_course.txt")
-            with open(course_path, 'w') as f:
+            with open(course_path, "w") as f:
                 f.write("Course Title: New Course\n")
                 f.write("Course Link: http://example.com/new\n")
                 f.write("Course Instructor: New Instructor\n")
                 f.write("\nLesson 0: Introduction\nNew content.\n")
 
             # Add with clear_existing=True
-            courses, chunks = test_rag_system.add_course_folder(temp_dir, clear_existing=True)
+            courses, chunks = test_rag_system.add_course_folder(
+                temp_dir, clear_existing=True
+            )
 
             assert courses == 1
             assert chunks > 0
@@ -316,7 +349,7 @@ class TestRAGSystemIntegration:
         assert courses == 0
         assert chunks == 0
 
-    @patch('rag_system.anthropic.Anthropic')
+    @patch("rag_system.anthropic.Anthropic")
     def test_full_workflow_with_real_search(self, mock_anthropic, populated_rag_system):
         """Test complete workflow: query triggers search, returns real results"""
         # Mock Anthropic client to simulate tool use
@@ -337,7 +370,9 @@ class TestRAGSystemIntegration:
 
         # Mock final response
         final_response = Mock()
-        final_response.content = [Mock(text="Based on the course content, machine learning is defined as...")]
+        final_response.content = [
+            Mock(text="Based on the course content, machine learning is defined as...")
+        ]
 
         mock_client.messages.create.side_effect = [tool_use_response, final_response]
 
@@ -345,10 +380,14 @@ class TestRAGSystemIntegration:
         populated_rag_system.ai_generator.client = mock_client
 
         # Execute query
-        response, sources, source_links = populated_rag_system.query("What is machine learning?")
+        response, sources, source_links = populated_rag_system.query(
+            "What is machine learning?"
+        )
 
         # Verify response
-        assert response == "Based on the course content, machine learning is defined as..."
+        assert (
+            response == "Based on the course content, machine learning is defined as..."
+        )
 
         # Verify that real search was performed and returned results
         assert len(sources) > 0
@@ -366,8 +405,7 @@ class TestRAGSystemIntegration:
         """Test that tool manager properly integrates with search tools"""
         # Test direct tool execution
         result = populated_rag_system.tool_manager.execute_tool(
-            "search_course_content",
-            query="machine learning"
+            "search_course_content", query="machine learning"
         )
 
         assert isinstance(result, str)
@@ -389,8 +427,7 @@ class TestRAGSystemIntegration:
     def test_outline_tool_integration(self, populated_rag_system):
         """Test course outline tool integration"""
         result = populated_rag_system.tool_manager.execute_tool(
-            "get_course_outline",
-            course_name="Machine Learning"
+            "get_course_outline", course_name="Machine Learning"
         )
 
         assert isinstance(result, str)

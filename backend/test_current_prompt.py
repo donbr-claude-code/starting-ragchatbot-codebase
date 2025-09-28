@@ -3,8 +3,8 @@
 Test the current system prompt behavior
 """
 
-import sys
 import os
+import sys
 
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(__file__))
@@ -26,7 +26,7 @@ def test_current_prompt():
     key_phrases = [
         "CRITICAL: You MUST use tools",
         "ALWAYS use tools for course-related queries",
-        "Course-related questions"
+        "Course-related questions",
     ]
 
     print("Key phrases check:")

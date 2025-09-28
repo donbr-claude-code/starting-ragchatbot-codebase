@@ -3,17 +3,17 @@
 Test script to specifically examine Claude's tool usage behavior.
 """
 
-import sys
-import os
 import json
+import os
+import sys
 
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(__file__))
 
+from ai_generator import AIGenerator
 from config import config
 from rag_system import RAGSystem
-from ai_generator import AIGenerator
-from search_tools import ToolManager, CourseSearchTool, CourseOutlineTool
+from search_tools import CourseOutlineTool, CourseSearchTool, ToolManager
 from vector_store import VectorStore
 
 
@@ -27,16 +27,16 @@ def test_claude_tool_usage():
     # Different types of queries to test
     test_queries = [
         "What is machine learning?",  # Should potentially use search
-        "Tell me about the MCP course", # Should definitely use search
-        "Give me the outline of the Computer Use course", # Should use outline tool
-        "What are the main topics covered in these courses?", # Should use search
-        "Hello, how are you?", # Should NOT use tools
+        "Tell me about the MCP course",  # Should definitely use search
+        "Give me the outline of the Computer Use course",  # Should use outline tool
+        "What are the main topics covered in these courses?",  # Should use search
+        "Hello, how are you?",  # Should NOT use tools
     ]
 
     for i, query in enumerate(test_queries, 1):
         print(f"\n{'-'*60}")
         print(f"Test {i}: {query}")
-        print('-'*60)
+        print("-" * 60)
 
         try:
             # Reset sources
@@ -66,9 +66,9 @@ def test_claude_tool_usage():
 
 def test_api_call_direct():
     """Test direct API call to see raw tool usage"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing direct API call with tools...")
-    print("="*60)
+    print("=" * 60)
 
     # Initialize components
     store = VectorStore(config.CHROMA_PATH, config.EMBEDDING_MODEL, config.MAX_RESULTS)
@@ -88,7 +88,7 @@ def test_api_call_direct():
             query=query,
             conversation_history=None,
             tools=tool_manager.get_tool_definitions(),
-            tool_manager=tool_manager
+            tool_manager=tool_manager,
         )
 
         print(f"Response: {response}")
@@ -105,14 +105,15 @@ def test_api_call_direct():
     except Exception as e:
         print(f"❌ Direct API call failed: {str(e)}")
         import traceback
+
         traceback.print_exc()
 
 
 def test_tool_definitions():
     """Check if tool definitions are properly formatted"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Checking tool definitions...")
-    print("="*60)
+    print("=" * 60)
 
     store = VectorStore(config.CHROMA_PATH, config.EMBEDDING_MODEL, config.MAX_RESULTS)
     tool_manager = ToolManager()
@@ -130,7 +131,7 @@ def test_tool_definitions():
         print(json.dumps(defn, indent=2))
 
         # Validate required fields
-        required_fields = ['name', 'description', 'input_schema']
+        required_fields = ["name", "description", "input_schema"]
         for field in required_fields:
             if field not in defn:
                 print(f"❌ Missing required field: {field}")
@@ -140,9 +141,9 @@ def test_tool_definitions():
 
 def test_system_prompt():
     """Check the system prompt content"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Checking system prompt...")
-    print("="*60)
+    print("=" * 60)
 
     ai_generator = AIGenerator(config.ANTHROPIC_API_KEY, config.ANTHROPIC_MODEL)
 
@@ -157,7 +158,7 @@ def test_system_prompt():
         "get_course_outline",
         "tool",
         "Tool Usage Guidelines",
-        "One tool use per query maximum"
+        "One tool use per query maximum",
     ]
 
     for phrase in key_phrases:
@@ -170,7 +171,7 @@ def test_system_prompt():
 def main():
     """Run all tests"""
     print("Claude Tool Usage Analysis")
-    print("="*60)
+    print("=" * 60)
 
     test_system_prompt()
     test_tool_definitions()

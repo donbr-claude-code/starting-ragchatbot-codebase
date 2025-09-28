@@ -4,27 +4,27 @@ Debug script to test the RAG system components independently.
 This script helps identify where the "query failed" issue is occurring.
 """
 
-import sys
-import os
-import traceback
 import json
-from typing import Dict, Any
+import os
+import sys
+import traceback
+from typing import Any, Dict
 
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(__file__))
 
+from ai_generator import AIGenerator
 from config import config
 from rag_system import RAGSystem
+from search_tools import CourseOutlineTool, CourseSearchTool, ToolManager
 from vector_store import VectorStore
-from search_tools import CourseSearchTool, CourseOutlineTool, ToolManager
-from ai_generator import AIGenerator
 
 
 def test_component(name: str, test_func):
     """Test a component and print results"""
     print(f"\n{'='*50}")
     print(f"Testing: {name}")
-    print('='*50)
+    print("=" * 50)
 
     try:
         result = test_func()
@@ -41,11 +41,15 @@ def test_component(name: str, test_func):
 
 def test_config():
     """Test configuration"""
-    print(f"ANTHROPIC_API_KEY: {'✅ Set' if config.ANTHROPIC_API_KEY else '❌ Missing'}")
+    print(
+        f"ANTHROPIC_API_KEY: {'✅ Set' if config.ANTHROPIC_API_KEY else '❌ Missing'}"
+    )
     print(f"ANTHROPIC_MODEL: {config.ANTHROPIC_MODEL}")
     print(f"EMBEDDING_MODEL: {config.EMBEDDING_MODEL}")
     print(f"CHROMA_PATH: {config.CHROMA_PATH}")
-    print(f"Database exists: {'✅ Yes' if os.path.exists(config.CHROMA_PATH) else '❌ No'}")
+    print(
+        f"Database exists: {'✅ Yes' if os.path.exists(config.CHROMA_PATH) else '❌ No'}"
+    )
     return True
 
 
@@ -117,7 +121,9 @@ def test_tool_manager():
         print(f"- {defn.get('name')}: {defn.get('description', 'No description')}")
 
     # Test tool execution
-    result = tool_manager.execute_tool("search_course_content", query="machine learning")
+    result = tool_manager.execute_tool(
+        "search_course_content", query="machine learning"
+    )
     print(f"Tool execution result length: {len(result)}")
 
     # Check sources
@@ -183,8 +189,7 @@ def test_direct_tool_execution():
 
     # Test search tool directly
     search_result = rag.tool_manager.execute_tool(
-        "search_course_content",
-        query="machine learning"
+        "search_course_content", query="machine learning"
     )
     print(f"Direct search result length: {len(search_result)}")
     print(f"Search result preview: {search_result[:200]}...")
@@ -198,7 +203,7 @@ def test_direct_tool_execution():
 def main():
     """Run all diagnostic tests"""
     print("RAG System Diagnostic Tool")
-    print("="*50)
+    print("=" * 50)
 
     tests = [
         ("Configuration", test_config),
@@ -217,7 +222,7 @@ def main():
 
     print(f"\n{'='*50}")
     print("SUMMARY")
-    print('='*50)
+    print("=" * 50)
 
     for name, success in results.items():
         status = "✅ PASS" if success else "❌ FAIL"

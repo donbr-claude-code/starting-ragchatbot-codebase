@@ -1,19 +1,20 @@
-import pytest
-import sys
 import os
-import tempfile
 import shutil
-from unittest.mock import Mock, MagicMock
+import sys
+import tempfile
+from unittest.mock import MagicMock, Mock
+
+import pytest
 
 # Add the backend directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from config import Config
-from vector_store import VectorStore
-from search_tools import CourseSearchTool, CourseOutlineTool, ToolManager
 from ai_generator import AIGenerator
+from config import Config
+from models import Course, CourseChunk, Lesson
 from rag_system import RAGSystem
-from models import Course, Lesson, CourseChunk
+from search_tools import CourseOutlineTool, CourseSearchTool, ToolManager
+from vector_store import VectorStore
 
 
 @pytest.fixture
@@ -39,7 +40,7 @@ def mock_vector_store():
         metadata=[{"course_title": "Test Course", "lesson_number": 1}],
         distances=[0.1],
         error=None,
-        is_empty=Mock(return_value=False)
+        is_empty=Mock(return_value=False),
     )
 
     mock_store._resolve_course_name.return_value = "Test Course"
@@ -52,16 +53,28 @@ def mock_vector_store():
 def sample_course():
     """Sample course data for testing"""
     lessons = [
-        Lesson(lesson_number=0, title="Introduction", lesson_link="http://example.com/lesson0"),
-        Lesson(lesson_number=1, title="Basic Concepts", lesson_link="http://example.com/lesson1"),
-        Lesson(lesson_number=2, title="Advanced Topics", lesson_link="http://example.com/lesson2")
+        Lesson(
+            lesson_number=0,
+            title="Introduction",
+            lesson_link="http://example.com/lesson0",
+        ),
+        Lesson(
+            lesson_number=1,
+            title="Basic Concepts",
+            lesson_link="http://example.com/lesson1",
+        ),
+        Lesson(
+            lesson_number=2,
+            title="Advanced Topics",
+            lesson_link="http://example.com/lesson2",
+        ),
     ]
 
     course = Course(
         title="Introduction to Machine Learning",
         course_link="http://example.com/course",
         instructor="Dr. Test",
-        lessons=lessons
+        lessons=lessons,
     )
 
     return course
@@ -75,20 +88,20 @@ def sample_course_chunks(sample_course):
             content="This is an introduction to machine learning concepts.",
             course_title=sample_course.title,
             lesson_number=0,
-            chunk_index=0
+            chunk_index=0,
         ),
         CourseChunk(
             content="We will cover basic concepts and terminology.",
             course_title=sample_course.title,
             lesson_number=1,
-            chunk_index=1
+            chunk_index=1,
         ),
         CourseChunk(
             content="Advanced topics include neural networks and deep learning.",
             course_title=sample_course.title,
             lesson_number=2,
-            chunk_index=2
-        )
+            chunk_index=2,
+        ),
     ]
 
     return chunks
@@ -100,7 +113,7 @@ def real_vector_store(test_config):
     store = VectorStore(
         chroma_path=test_config.CHROMA_PATH,
         embedding_model=test_config.EMBEDDING_MODEL,
-        max_results=test_config.MAX_RESULTS
+        max_results=test_config.MAX_RESULTS,
     )
 
     yield store

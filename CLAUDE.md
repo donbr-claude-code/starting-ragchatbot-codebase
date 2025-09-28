@@ -56,6 +56,32 @@ uv run pytest tests/ -v --tb=short
 uv run python -m py_compile backend/ai_generator.py
 ```
 
+### Code Quality Commands
+
+```bash
+# Install development dependencies (includes Black, isort, flake8, mypy, pre-commit)
+uv sync --group dev
+
+# Format code automatically
+./scripts/format.sh
+
+# Run quality checks (linting, type checking, format checking)
+./scripts/lint.sh
+
+# Complete quality assurance pipeline (format + lint + test)
+./scripts/quality.sh
+
+# Manual quality tool usage
+uv run --group dev black backend/ main.py          # Format with Black
+uv run --group dev isort backend/ main.py          # Sort imports
+uv run --group dev flake8 backend/ main.py         # Lint with flake8
+uv run --group dev mypy backend/ main.py           # Type check with mypy
+
+# Pre-commit hooks (install once, then runs automatically on git commit)
+uv run --group dev pre-commit install
+uv run --group dev pre-commit run --all-files      # Run on all files manually
+```
+
 ## Architecture Overview
 
 This is a **Retrieval-Augmented Generation (RAG) chatbot** for course materials using a **tool-calling architecture** where Claude dynamically decides when to search the knowledge base.
@@ -137,6 +163,8 @@ All configuration in `backend/config.py`:
 ## Implementation Notes
 
 **Dependencies**: Requires Python 3.13+, managed via `uv`. Key packages: chromadb==1.0.15, anthropic==0.58.2, fastapi==0.116.1, sentence-transformers==5.0.0
+
+**Code Quality**: The project uses Black for code formatting, isort for import sorting, flake8 for linting, and mypy for type checking. Pre-commit hooks are configured to automatically run these tools. Use `./scripts/quality.sh` for a complete quality check pipeline.
 
 **Error Boundaries**: Each component has try-catch blocks with fallback behavior. Network failures, API errors, and search failures return user-friendly messages.
 
